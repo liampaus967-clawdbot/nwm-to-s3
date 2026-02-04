@@ -32,8 +32,10 @@ load_dotenv()
 NWM_BUCKET = "noaa-nwm-pds"
 NWM_REGION = "us-east-1"
 
-# Output S3 bucket
-OUTPUT_BUCKET = os.getenv("S3_BUCKET", "nwm-streamflow-data")
+# Output S3 bucket (uses AWS_PROFILE from env for auth)
+OUTPUT_BUCKET = os.getenv("S3_BUCKET_NAME", "fgp-flow-percentile-data-west-dev")
+OUTPUT_REGION = os.getenv("AWS_REGION", "us-east-1")
+AWS_PROFILE = os.getenv("AWS_PROFILE")
 OUTPUT_KEY = "live/current_velocity.json"
 
 
@@ -245,7 +247,13 @@ def upload_to_s3(data: dict, ref_time: datetime, dry_run: bool = False) -> str:
         print(f"Saved to {local_path}")
         return str(local_path)
     
-    s3 = boto3.client("s3", region_name=os.getenv("AWS_REGION", "us-east-1"))
+    # Create session with profile if specified, otherwise use default credentials
+    if AWS_PROFILE:
+        print(f"Using AWS profile: {AWS_PROFILE}")
+        session = boto3.Session(profile_name=AWS_PROFILE)
+        s3 = session.client("s3", region_name=OUTPUT_REGION)
+    else:
+        s3 = boto3.client("s3", region_name=OUTPUT_REGION)
     
     s3.put_object(
         Bucket=OUTPUT_BUCKET,
@@ -255,7 +263,7 @@ def upload_to_s3(data: dict, ref_time: datetime, dry_run: bool = False) -> str:
         CacheControl="max-age=300",  # 5 minute cache
     )
     
-    url = f"https://{OUTPUT_BUCKET}.s3.us-east-1.amazonaws.com/{OUTPUT_KEY}"
+    url = f"https://{OUTPUT_BUCKET}.s3.{OUTPUT_REGION}.amazonaws.com/{OUTPUT_KEY}"
     print(f"Uploaded to: {url}")
     
     return url
