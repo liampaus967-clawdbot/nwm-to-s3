@@ -33,7 +33,7 @@ NWM_BUCKET = "noaa-nwm-pds"
 NWM_REGION = "us-east-1"
 
 # Output S3 bucket (uses AWS_PROFILE from env for auth)
-OUTPUT_BUCKET = os.getenv("S3_BUCKET_NAME", "fgp-flow-percentile-data-west-dev")
+OUTPUT_BUCKET = os.getenv("S3_BUCKET_NAME", "nwm-streamflow-data")
 OUTPUT_REGION = os.getenv("AWS_REGION", "us-east-1")
 AWS_PROFILE = os.getenv("AWS_PROFILE")
 OUTPUT_KEY = "live/current_velocity.json"
