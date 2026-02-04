@@ -169,13 +169,14 @@ def categorize_streamflow(cms: float) -> str:
 
 def process_nwm_data(nc_path: Path, min_streamflow: float = 0.1) -> dict:
     """
-    Process NWM NetCDF and extract velocity/streamflow per COMID.
+    Process NWM NetCDF and extract streamflow per COMID.
     
     Args:
         nc_path: Path to NetCDF file
         min_streamflow: Minimum streamflow (m³/s) to include (filters out tiny streams)
     
     Returns dict ready for JSON serialization.
+    Output format: {comid: streamflow_cms} — minimal for smallest JSON size
     """
     print(f"Processing NetCDF: {nc_path}")
     
@@ -185,42 +186,32 @@ def process_nwm_data(nc_path: Path, min_streamflow: float = 0.1) -> dict:
     # - feature_id: COMID (NHDPlus reach identifier)
     # - streamflow: discharge in m³/s
     # - velocity: water velocity in m/s
-    # - nudge: data assimilation correction
     
     comids = ds["feature_id"].values
     streamflow = ds["streamflow"].values.flatten()
-    velocity = ds["velocity"].values.flatten()
     
     print(f"Processing {len(comids):,} reaches (min flow: {min_streamflow} m³/s)...")
     
-    # Build site data dict - COMPACT format for smaller JSON
-    # Keys: v=velocity(m/s), q=streamflow(m³/s), c=category
+    # MINIMAL format: {comid: streamflow_cms}
+    # Frontend can categorize/style based on value
     sites = {}
     skipped = 0
     
     for i, comid in enumerate(comids):
-        v = float(velocity[i])
         q = float(streamflow[i])
         
         # Skip invalid/missing data
-        if np.isnan(v) or np.isnan(q) or v < 0 or q < 0:
+        if np.isnan(q) or q < 0:
             skipped += 1
             continue
         
-        # Filter out tiny streams (most of the 2.7M reaches)
+        # Filter out tiny streams
         if q < min_streamflow:
             skipped += 1
             continue
         
-        # Compact format: [velocity_ms, streamflow_cms, flow_category_code]
-        # Category codes: 0=very_low, 1=low, 2=moderate, 3=high, 4=very_high, 5=extreme
-        cat_code = {"very_low": 0, "low": 1, "moderate": 2, "high": 3, "very_high": 4, "extreme": 5}
-        
-        sites[str(comid)] = [
-            round(v, 3),  # velocity m/s
-            round(q, 2),  # streamflow m³/s
-            cat_code[categorize_streamflow(q)]
-        ]
+        # Just comid → flow (rounded to 2 decimals)
+        sites[str(comid)] = round(q, 2)
     
     ds.close()
     
