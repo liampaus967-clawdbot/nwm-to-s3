@@ -169,7 +169,7 @@ def categorize_streamflow(cms: float) -> str:
         return "extreme"
 
 
-def process_nwm_data(nc_path: Path, min_streamflow: float = 0.1) -> dict:
+def process_nwm_data(nc_path: Path, min_streamflow: float = 10.0) -> dict:
     """
     Process NWM NetCDF and extract streamflow per COMID.
     
